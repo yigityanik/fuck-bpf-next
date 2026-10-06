@@ -71,3 +71,13 @@ Kaynak: https://github.com/techyminati/fuck-bpf/tree/lineage-23.2
 
 Özgün yama yazarları ve commit konuları `SOURCES.md` içinde korunmuştur.
 Paket Apache-2.0 lisanslı kaynak projeden türetilmiştir; `LICENSE` dosyasına bakın.
+
+## FCM 5 config düzeltmesi
+
+FCM 5'in kullandığı `kernel_config_r_5.4` modülü ve sekiz `r/android-5.4`
+dosyası kernel/configs birleşik yamasına eklendi. Kaynak:
+LineageOS/android_kernel_configs, `091688a5c5186cd124a0d19b06441bb8b04c3073`.
+Bu değişiklik cihaz kernelini 5.4'e yükseltmez; matris bağımlılığını tamamlar.
+
+Güncellenmiş paket temiz kaynak ağacı içindir. Önceki paket uygulanmışsa
+tüm paketi yeniden uygulamayın; yalnızca eksik dosyaları geri getirin.
