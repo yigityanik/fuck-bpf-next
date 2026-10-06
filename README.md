@@ -1,85 +1,73 @@
-# Fuck-BPF aka Android 16 QPR2 BPF Reverts to support <= 4.19 kernels
+# LineageOS 24.0 için legacy kernel / BPF uyarlaması
 
-![GitHub Stars](https://img.shields.io/github/stars/techyminati/fuck-bpf?style=social)
-![Patches](https://img.shields.io/badge/Patches-34-brightgreen?logo=git)
-![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
-![Kernel Support](https://img.shields.io/badge/Kernel-4.4%20|%204.9%20|%204.14%20|%204.19-green.svg)
+Bu paket, techyminati/fuck-bpf `lineage-23.2` dalındaki değişiklikleri
+LineageOS `lineage-24.0` kaynaklarına taşır. Her bileşen için birleştirilmiş
+bir `git am` yaması içerir. Kaynak dal ile hedef revizyonlar
+`BASE_REVISIONS.json` içinde sabitlenmiştir. Hazırlanma tarihi: 6 Ekim 2026.
 
-## Overview
+## Kullanım
 
-This repository contains patches to revert "Bpf Requirements" in AOSP to enable legacy kernels devices (<=  4.19) boot Android 16 QPR2.
-
-## Background
-
-With the release of Android 16 QPR2, Google introduced strict BPF requirements that prevent booting on kernels older than version 5.4. This change rendered numerous devices unable to run Android 16 QPR2, particularly affecting:
-
-- Devices with kernel 4.19 and older kver.
-
-Also, Many devices in the market lack publicly available kernel sources, making it impossible to backport BPF support or upgrade to newer/latest upstream, other than this, sometimes it's infeasible to upstream kernel source due to certain factors (like some oplus devices). The mandatory BPF requirements in Android 16 QPR2 created a hard compatibility barrier, causing boot failures & splash loop on these devices.
-
-## Solution
-
-This repository provides source-level reverts/patches that reverse the BPF requirements, allowing Android 16 QPR2 to boot on devices without full BPF support. The patches implement fallback mechanisms and remove hard dependencies on BPF functionality.
-
-## Current Status
-
-**Tested Configurations:**
-- **Kernel 4.19** - Android 16 QPR2 boots successfully
-- **Kernel 4.14** - Android 16 QPR2 boots successfully
-
-**Pending Testing:**
-- **Kernel 4.9** - Support added, but untested.
-- **Kernel 4.4** - Support added, but untested.
-
-**Supported Kernels:**
-Support has been added for all kernel versions: **4.4, 4.9, 4.14, and 4.19**. As of now, AOSP by default supports kver >=5.4 .
-
-**Important Notes:**
-- If you have tested on 4.9 or 4.4 kernels, please let us know your results!
-- Unfortunately, it's not possible to support kernels older than 4.4 at this time.
-- If you manage to make older kernels work, please submit a PR!
-
-## Usage
-
-### Use Auto Patch Script
-1. Clone this repo in root of your source tree
-2. Run command:
-```
-./fuck-bpf/apply.sh --mb
-```
-
-### Manual Application
-Patches can be applied manually to specific components:
+ZIP'i Android kaynak ağacının köküne çıkarın. Dizin adı
+`fuck-bpf-lineage-24.0` olmalıdır. Kaynak ağacının kökünde:
 
 ```bash
-cd /path/to/android/source/component
-git am /path/to/this/repo/component/*.patch
+bash fuck-bpf-lineage-24.0/apply.sh --check
+bash fuck-bpf-lineage-24.0/apply.sh --mb
 ```
 
-### Prerequisites
+İlk komut tüm bileşenlerde uygulanabilirliği kontrol eder. İkinci komut
+aynı kontrolü tekrar yapar ve sekiz Git deposuna yamaları commit olarak uygular.
+Yerel değişiklik varsa işlemi durdurur; dosya silmez veya çalışma ağacını
+sıfırlamaz. Git kullanıcı adı/e-posta ayarlarınızın mevcut olması gerekir.
+Önceki 23.2 BPF yamaları uygulanmış bir ağaç yerine temiz 24.0 kaynakları kullanın.
 
-- You have Android 16 QPR2 tree with proper blob patches
-- Basic knowledge of Git & Android build system
-- Common sense :D
+## Uyarlanan noktalar
 
+- Connectivity'nin `android::base::Result<void>` API'siyle uyumlu hata işleme.
+- Android 17 kaynaklarındaki 25Q4/26Q4 kernel sürümü kontrollerinin gevşetilmesi.
+- BPF program/map yükleme hatalarında platform loader ve `netbpfload done`
+  akışının korunması; vendor yükleme hatasının açılışı beklemede bırakmaması.
+- BpfNetMaps başlatma hatalarında süreç boyunca sabit fallback. Yeni izin chunk,
+  yerel ağ cache/generation ve L4S işlemleri de bu durumda devre dışı kalır.
+  Gerçek Android SDK kontrolleri korunur; sürüm sorguları sahte sonuç döndürmez.
+- Yeni DNS başlatma akışında `ADnsHelper_init` hatasının abort yerine loglanması.
+- Eski kernel için trafik istatistiklerinde qtaguid fallback'inin taşınması.
+- Kaldırılan S/4.14 kernel config modülünün ve FCM 5/6 tanımlarının geri getirilmesi;
+  FCM 5/6'nın her iki release modunda da kurulum listesine eklenmesi.
+- Core cgroup ve APEX doğrudan I/O değişikliklerinin taşınması.
 
-## Contributing
+`frameworks/native` için yama yok: hedefte ilgili BLASTBufferQueue yolu zaten
+`epoll_wait` ve milisaniye timeout dönüşümünü kullanıyor. S/4.19 gereksinimlerinin
+bir kısmı da hedef kaynaklarda zaten gevşetilmişti.
 
-Contributions are welcome. When submitting patches:
+## Doğrulama ve sınırlar
 
-1. Follow the existing patch naming convention (0001-description.patch)
-2. Ensure patches apply cleanly with `git am`
-3. Test on target hardware before submitting
-4. Include clear commit messages explaining the change
+Sekiz bileşenin tamamına temiz, sabitlenmiş kaynaklarda `git am` uygulandı.
+Ortaya çıkan Git tree hash'leri uyarlanmış kaynaklarla aynı. Değişen Java ve Rust
+dosyalarında parser hatası yok; C++ dosyalarında standart format makroları
+normalize edilerek önceki kaynaklara göre yeni parser hatası olmadığı kontrol edildi.
+`git diff --check` geçti. Ayrıntılar `VALIDATION.json` dosyasında.
 
-## Credits
+Bu doğrulamalar tam derleme veya cihaz testi değildir. ROM derlemesi, VINTF
+uyumluluk denetimi ve cihazda açılış/ağ testleri yapılmadı. 4.4/4.9/4.14/4.19 için
+kaynak uyumluluğu amaçlanır; bu pakette hiçbir cihaz/kernel kombinasyonu test edilmiş
+olarak sunulmaz. Eski kaynak projenin 23.2 test sonuçları 24.0 için geçerli sayılmaz.
 
-* Patches in this repository are derived from work by multiple contributors, all credits goes to the original author of patches.
-* This repository is curated & maintained by [Aryan Sinha](https://github.com/techyminati)
+BPF fallback etkin olduğunda BPF tabanlı UID firewall, Data Saver, yerel ağ
+erişim kontrolü, socket etiketleme ve bazı trafik muhasebesi özellikleri eksik
+kalabilir. Trafik sayaçlarının qtaguid fallback'i için kernelde ilgili `/proc`
+arayüzleri bulunmalıdır. HAL, blob, SELinux, device tree ve Android 17'nin BPF
+dışındaki kernel gereksinimleri ayrıca ele alınmalıdır. FCM XML'lerinin geri
+eklenmesi, tüm VINTF kontrollerinin geçtiği anlamına gelmez.
 
-## License
-This repo is licensed under Apache License 2.0
+Hedef dallar ilerlediğinde `--check` başarısız olabilir; bu durumda
+`BASE_REVISIONS.json` ile kaynak revizyonlarınızı karşılaştırın. Uygulama ortasında
+Git hatası oluşursa önceki bileşenlerin commit'leri kalır; hata veren bileşende
+`git am --continue` veya `git am --abort` kullanın.
 
-## Disclaimer
+## Kaynak ve lisans
 
-These patches modify core Android system components. Use at your own risk. Thoroughly test on target hardware before deploying to release. 
+Kaynak: https://github.com/techyminati/fuck-bpf/tree/lineage-23.2
+
+Özgün yama yazarları ve commit konuları `SOURCES.md` içinde korunmuştur.
+Paket Apache-2.0 lisanslı kaynak projeden türetilmiştir; `LICENSE` dosyasına bakın.

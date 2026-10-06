@@ -1,0 +1,29 @@
+From bac8c5449fe3063e73a336e602cbed598fd786a7 Mon Sep 17 00:00:00 2001
+From: Codex <codex@local.invalid>
+Date: Tue, 6 Oct 2026 16:21:00 +0300
+Subject: [PATCH] DnsResolver: port legacy kernel BPF compatibility to
+ LineageOS 24.0
+
+Adapted from techyminati/fuck-bpf lineage-23.2 (990553a).
+Original contributor attribution and target revisions are listed in SOURCES.md and BASE_REVISIONS.json.
+---
+ DnsProxyListener.cpp | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/DnsProxyListener.cpp b/DnsProxyListener.cpp
+index f55d2c5..b50f7b9 100644
+--- a/DnsProxyListener.cpp
++++ b/DnsProxyListener.cpp
+@@ -717,7 +717,11 @@ DnsProxyListener::DnsProxyListener() : FrameworkListener(SOCKET_NAME) {
+     mGetDnsNetIdCommand = std::make_unique<GetDnsNetIdCommand>();
+     registerCmd(mGetDnsNetIdCommand.get());
+ 
+-    if (ADnsHelper_init()) abort();
++    const int ret = ADnsHelper_init();
++    if (ret) {
++        LOG(ERROR) << "ADnsHelper_init failed: " << strerror(-ret)
++                   << "; continuing without BPF DNS filtering";
++    }
+ }
+ 
+ void DnsProxyListener::Handler::spawn() {

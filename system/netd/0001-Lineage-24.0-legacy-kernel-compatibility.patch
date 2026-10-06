@@ -1,0 +1,45 @@
+From a0fb3040ff52e6d19069293853aa9e2a0809ff2c Mon Sep 17 00:00:00 2001
+From: Codex <codex@local.invalid>
+Date: Tue, 6 Oct 2026 16:21:03 +0300
+Subject: [PATCH] netd: port legacy kernel BPF compatibility to LineageOS 24.0
+
+Adapted from techyminati/fuck-bpf lineage-23.2 (990553a).
+Original contributor attribution and target revisions are listed in SOURCES.md and BASE_REVISIONS.json.
+---
+ server/Controllers.cpp | 3 ++-
+ server/main.cpp        | 4 ++--
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/server/Controllers.cpp b/server/Controllers.cpp
+index 8a2c3be..7ad239b 100644
+--- a/server/Controllers.cpp
++++ b/server/Controllers.cpp
+@@ -335,7 +335,8 @@ void Controllers::init() {
+         // As such simply exit netd.  This may crash loop the system, but by failing
+         // to bootup we will trigger rollback and thus this offers us protection against
+         // a mainline update breaking things.
+-        exit(2);
++        // Legacy kernels may not provide the BPF accounting maps.
++        // Continue with the available networking functionality.
+     }
+     gLog.info("Enabling bandwidth control: %" PRId64 "us", s.getTimeAndResetUs());
+ 
+diff --git a/server/main.cpp b/server/main.cpp
+index be9a1d0..c702b8a 100644
+--- a/server/main.cpp
++++ b/server/main.cpp
+@@ -142,12 +142,12 @@ int main(const int argc, const char* argv[]) {
+     std::string cg2_path;
+     if (!CgroupGetControllerPath(CGROUPV2_HIERARCHY_NAME, &cg2_path)) {
+         ALOGE("Failed to find cgroup v2 root %s", strerror(errno));
+-        exit(1);
++        cg2_path = "/sys/fs/cgroup";
+     }
+ 
+     if (libnetd_updatable_init(cg2_path.c_str())) {
+         ALOGE("libnetd_updatable_init failed");
+-        exit(1);
++        //exit(1);
+     }
+     gLog.info("libnetd_updatable_init success");
+ 

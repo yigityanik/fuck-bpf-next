@@ -1,0 +1,62 @@
+From f55c6d401a936e00ef8d6dbcbd1877a9900b4136 Mon Sep 17 00:00:00 2001
+From: Codex <codex@local.invalid>
+Date: Tue, 6 Oct 2026 16:21:01 +0300
+Subject: [PATCH] bpf: port legacy kernel BPF compatibility to LineageOS 24.0
+
+Adapted from techyminati/fuck-bpf lineage-23.2 (990553a).
+Original contributor attribution and target revisions are listed in SOURCES.md and BASE_REVISIONS.json.
+---
+ loader/Loader.cpp               | 4 +---
+ loader/bpfloader.rs             | 4 ++--
+ loader/include/libbpf_android.h | 2 +-
+ 3 files changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/loader/Loader.cpp b/loader/Loader.cpp
+index 08c6b6d..e31a309 100644
+--- a/loader/Loader.cpp
++++ b/loader/Loader.cpp
+@@ -601,9 +601,7 @@ void vendorBpfLoader() {
+         ALOGE("If this triggers reliably, you're probably missing kernel options or patches.");
+         ALOGE("If this triggers randomly, you might be hitting some memory allocation "
+               "problems or startup script race.");
+-        ALOGE("--- DO NOT EXPECT SYSTEM TO BOOT SUCCESSFULLY ---");
+-        sleep(20);
+-        exit(121);
++        ALOGW("Continuing with legacy kernel BPF fallback.");
+     }
+ 
+     const char* args[] = {"/apex/com.android.tethering/bin/netbpfload", "done", NULL};
+diff --git a/loader/bpfloader.rs b/loader/bpfloader.rs
+index f23d882..d6b8a95 100644
+--- a/loader/bpfloader.rs
++++ b/loader/bpfloader.rs
+@@ -733,7 +733,7 @@ fn load_libbpf_progs() {
+     for file_desc in file_vec {
+         if let Err(e) = libbpf_worker(&file_desc) {
+             if file_desc.critical {
+-                panic!("Error when loading {0}: {e}", file_desc.filename);
++                error!("Critical BPF object unavailable: {0}: {e}", file_desc.filename);
+             } else {
+                 error!("Error when loading {0}: {e}", file_desc.filename);
+             }
+@@ -762,7 +762,7 @@ fn main() {
+     info!("Loading legacy BPF progs");
+ 
+     if let Err(e) = create_dir(Path::new("/sys/fs/bpf/vendor")) {
+-        panic!("Error during mkdir /sys/fs/bpf/vendor: {e}");
++        error!("Error during mkdir /sys/fs/bpf/vendor: {e}");
+     };
+ 
+     // SAFETY: Linking in the existing legacy vendor bpfloader functionality.
+diff --git a/loader/include/libbpf_android.h b/loader/include/libbpf_android.h
+index 706c0e8..d5a25bd 100644
+--- a/loader/include/libbpf_android.h
++++ b/loader/include/libbpf_android.h
+@@ -19,6 +19,6 @@
+ 
+ // The C++ portion of the BpfLoader is exposed as a terminal function.
+ #ifdef __cplusplus
+-extern "C" __noreturn
++extern "C"
+ #endif
+ void vendorBpfLoader();
