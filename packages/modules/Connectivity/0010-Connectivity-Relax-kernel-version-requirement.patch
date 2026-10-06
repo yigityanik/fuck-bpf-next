@@ -1,30 +1,30 @@
-From 794fc836cde351f696787703a57b9d2351d324d5 Mon Sep 17 00:00:00 2001
+From 08416b71be86f77de32640c17c5652e4e9992231 Mon Sep 17 00:00:00 2001
 From: Aryan Sinha <techyminati@outlook.com>
-Date: Sat, 21 Feb 2025 15:37:03 +0530
-Subject: [PATCH 1/3] Connectivity: Relax kernel version requirement
+Date: Fri, 21 Feb 2025 15:37:03 +0530
+Subject: [PATCH] Connectivity: Relax kernel version requirement
 
 ---
- bpf/loader/NetBpfLoad.cpp | 12 ++++--------
- bpf/netd/BpfHandler.cpp   | 25 -------------------------
- 2 files changed, 4 insertions(+), 33 deletions(-)
+ bpf/loader/NetBpfLoad.cpp | 12 +++-----
+ bpf/netd/BpfHandler.cpp   | 59 +++++++++++++++------------------------
+ 2 files changed, 27 insertions(+), 44 deletions(-)
 
 diff --git a/bpf/loader/NetBpfLoad.cpp b/bpf/loader/NetBpfLoad.cpp
-index 3efae9f158e..e5ba9c6c6f2 100644
+index 2a6192a..fa93120 100644
 --- a/bpf/loader/NetBpfLoad.cpp
 +++ b/bpf/loader/NetBpfLoad.cpp
-@@ -1608,28 +1608,24 @@ static int doLoad(char** argv, char * const envp[]) {
+@@ -1550,28 +1550,24 @@ static int doLoad(char** argv, char * const envp[]) {
      // both S and T require kernel 4.9 (and eBpf support)
      // (this also guarantees 'kernelVer' isn't an invalid uninitialized 0)
      if (!isAtLeastKernelVersion(4, 9)) {
 -        ALOGE("Android S & T require kernel 4.9.");
--        failed = true;
+-        return 3;
 +        ALOGW("Android S & T require kernel 4.9.");
      }
  
      // U bumps the kernel requirement up to 4.14
      if (isAtLeastU && !isAtLeastKernelVersion(4, 14)) {
 -        ALOGE("Android U requires kernel 4.14.");
--        failed = true;
+-        return 4;
 +        ALOGW("Android U requires kernel 4.14.");
      }
  
@@ -32,7 +32,7 @@ index 3efae9f158e..e5ba9c6c6f2 100644
      // see also: //system/netd/tests/kernel_test.cpp TestKernel419
      if (isAtLeastV && !isAtLeastKernelVersion(4, 19)) {
 -        ALOGE("Android V requires kernel 4.19.");
--        failed = true;
+-        return 5;
 +        ALOGW("Android V requires kernel 4.19.");
      }
  
@@ -40,47 +40,106 @@ index 3efae9f158e..e5ba9c6c6f2 100644
      // see also: //system/netd/tests/kernel_test.cpp TestKernel54
      if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4)) {
 -        ALOGE("Android 25Q2 requires kernel 5.4.");
--        failed = true;
+-        return 6;
 +        ALOGW("Android 25Q2 requires kernel 5.4.");
      }
  
      // 25Q4 bumps the kernel requirement up to 5.10
 diff --git a/bpf/netd/BpfHandler.cpp b/bpf/netd/BpfHandler.cpp
-index f7fd8b99a7a..922a6ea7679 100644
+index 722112f..71e6e7d 100644
 --- a/bpf/netd/BpfHandler.cpp
 +++ b/bpf/netd/BpfHandler.cpp
-@@ -81,31 +81,6 @@ static Status initPrograms(const char* cg2_path) {
+@@ -114,31 +114,6 @@ static Result<void> initPrograms(const char* cg2_path) {
      // This code was mainlined in T, so this should be trivially satisfied.
-     if (!isAtLeastT) return Status("S- platform is unsupported");
+     if (!isAtLeastT) return Error() << "S- platform is unsupported";
  
 -    // S requires eBPF support which was only added in 4.9, so this should be satisfied.
 -    if (!isAtLeastKernelVersion(4, 9)) {
--        return Status("kernel version < 4.9.0 is unsupported");
+-        return Error() << "kernel version < 4.9.0 is unsupported";
 -    }
 -
 -    // U bumps the kernel requirement up to 4.14
 -    if (isAtLeastU && !isAtLeastKernelVersion(4, 14)) {
--        return Status("U+ platform with kernel version < 4.14.0 is unsupported");
+-        return Error() << "U+ platform with kernel version < 4.14.0 is unsupported";
 -    }
 -
 -    // U mandates this mount point (though it should also be the case on T)
 -    if (isAtLeastU && !!strcmp(cg2_path, "/sys/fs/cgroup")) {
--        return Status("U+ platform with cg2_path != /sys/fs/cgroup is unsupported");
+-        return Error() << "U+ platform with cg2_path != /sys/fs/cgroup is unsupported";
 -    }
 -
 -    // V bumps the kernel requirement up to 4.19
 -    if (isAtLeastV && !isAtLeastKernelVersion(4, 19)) {
--        return Status("V+ platform with kernel version < 4.19.0 is unsupported");
+-        return Error() << "V+ platform with kernel version < 4.19.0 is unsupported";
 -    }
 -
 -    // 25Q2 bumps the kernel requirement up to 5.4
 -    if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4)) {
--        return Status("25Q2+ platform with kernel version < 5.4.0 is unsupported");
+-        return Error() << "25Q2+ platform with kernel version < 5.4.0 is unsupported";
 -    }
 -
      unique_fd cg_fd(open(cg2_path, O_DIRECTORY | O_RDONLY | O_CLOEXEC));
-     if (!cg_fd.ok()) return statusFromErrno(errno, "Opening cgroup dir failed");
+     if (!cg_fd.ok()) return Error(errno) << "Opening cgroup dir failed";
  
--- 
-2.34.1
-
+@@ -225,30 +200,40 @@ static Result<void> initPrograms(const char* cg2_path) {
+     }
+ 
+     if (isAtLeastKernelVersion(5, 10)) {
+-        if (queryProgram(cg_fd, BPF_CGROUP_INET_SOCK_RELEASE) <= 0) abort();
++        if (queryProgram(cg_fd, BPF_CGROUP_INET_SOCK_RELEASE) <= 0)
++            return Error(errno ? errno : EIO) << "BPF cgroup program unavailable: " << BPF_CGROUP_INET_SOCK_RELEASE;
+     }
+ 
+     if (isAtLeastV) {
+         // V requires 4.19+, so technically this 2nd 'if' is not required, but it
+         // doesn't hurt us to try to support AOSP forks that try to support older kernels.
+         if (isAtLeastKernelVersion(4, 19)) {
+-            if (queryProgram(cg_fd, BPF_CGROUP_INET4_CONNECT) <= 0) abort();
+-            if (queryProgram(cg_fd, BPF_CGROUP_INET6_CONNECT) <= 0) abort();
+-            if (queryProgram(cg_fd, BPF_CGROUP_UDP4_RECVMSG) <= 0) abort();
+-            if (queryProgram(cg_fd, BPF_CGROUP_UDP6_RECVMSG) <= 0) abort();
+-            if (queryProgram(cg_fd, BPF_CGROUP_UDP4_SENDMSG) <= 0) abort();
+-            if (queryProgram(cg_fd, BPF_CGROUP_UDP6_SENDMSG) <= 0) abort();
++            if (queryProgram(cg_fd, BPF_CGROUP_INET4_CONNECT) <= 0)
++            return Error(errno ? errno : EIO) << "BPF cgroup program unavailable: " << BPF_CGROUP_INET4_CONNECT;
++            if (queryProgram(cg_fd, BPF_CGROUP_INET6_CONNECT) <= 0)
++            return Error(errno ? errno : EIO) << "BPF cgroup program unavailable: " << BPF_CGROUP_INET6_CONNECT;
++            if (queryProgram(cg_fd, BPF_CGROUP_UDP4_RECVMSG) <= 0)
++            return Error(errno ? errno : EIO) << "BPF cgroup program unavailable: " << BPF_CGROUP_UDP4_RECVMSG;
++            if (queryProgram(cg_fd, BPF_CGROUP_UDP6_RECVMSG) <= 0)
++            return Error(errno ? errno : EIO) << "BPF cgroup program unavailable: " << BPF_CGROUP_UDP6_RECVMSG;
++            if (queryProgram(cg_fd, BPF_CGROUP_UDP4_SENDMSG) <= 0)
++            return Error(errno ? errno : EIO) << "BPF cgroup program unavailable: " << BPF_CGROUP_UDP4_SENDMSG;
++            if (queryProgram(cg_fd, BPF_CGROUP_UDP6_SENDMSG) <= 0)
++            return Error(errno ? errno : EIO) << "BPF cgroup program unavailable: " << BPF_CGROUP_UDP6_SENDMSG;
+         }
+ 
+         if (isAtLeastKernelVersion(5, 4)) {
+-            if (queryProgram(cg_fd, BPF_CGROUP_GETSOCKOPT) <= 0) abort();
+-            if (queryProgram(cg_fd, BPF_CGROUP_SETSOCKOPT) <= 0) abort();
++            if (queryProgram(cg_fd, BPF_CGROUP_GETSOCKOPT) <= 0)
++            return Error(errno ? errno : EIO) << "BPF cgroup program unavailable: " << BPF_CGROUP_GETSOCKOPT;
++            if (queryProgram(cg_fd, BPF_CGROUP_SETSOCKOPT) <= 0)
++            return Error(errno ? errno : EIO) << "BPF cgroup program unavailable: " << BPF_CGROUP_SETSOCKOPT;
+         }
+     }
+ 
+     if (isAtLeast26Q2) {
+         if (isAtLeastKernelVersion(6, 1) && !isAtLeastKernelVersion(6, 18)) {
+-            if (queryProgram(cg_fd, BPF_CGROUP_SOCK_OPS) <= 0) abort();
++            if (queryProgram(cg_fd, BPF_CGROUP_SOCK_OPS) <= 0)
++            return Error(errno ? errno : EIO) << "BPF cgroup program unavailable: " << BPF_CGROUP_SOCK_OPS;
+         }
+     }
+ 
+@@ -496,7 +481,9 @@ static void mapLockTest(void) {
+ 
+ Result<void> BpfHandler::initMaps() {
+     // bpfLock() requires bpfGetFdMapId which is only available on 4.14+ kernels.
+-    if (bpf::lockingEnabled && isAtLeastKernelVersion(4, 14)) mapLockTest();
++    if (bpf::lockingEnabled && isAtLeastKernelVersion(4, 14) &&
++        !access(BPF_NETD_PATH "map_netd_lock_array_test_map", F_OK) &&
++        !access(BPF_NETD_PATH "map_netd_lock_hash_test_map", F_OK)) mapLockTest();
+ 
+     RETURN_IF_NOT_OK(mStatsMapA.init(STATS_MAP_A_PATH));
+     RETURN_IF_NOT_OK(mStatsMapB.init(STATS_MAP_B_PATH));

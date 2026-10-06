@@ -1,13 +1,13 @@
-# Fuck-BPF aka Android 16 QPR2 BPF Reverts to support <= 4.19 kernels
+# Fuck-BPF aka Android 17 BPF Reverts to support <= 4.19 kernels
 
 ![GitHub Stars](https://img.shields.io/github/stars/techyminati/fuck-bpf?style=social)
-![Patches](https://img.shields.io/badge/Patches-34-brightgreen?logo=git)
+![Patches](https://img.shields.io/badge/Patches-27-brightgreen?logo=git)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
 ![Kernel Support](https://img.shields.io/badge/Kernel-4.4%20|%204.9%20|%204.14%20|%204.19-green.svg)
 
 ## Overview
 
-This repository contains patches to revert "Bpf Requirements" in AOSP to enable legacy kernels devices (<=  4.19) boot Android 16 QPR2.
+This repository contains patches to revert "Bpf Requirements" in AOSP to enable legacy kernels devices (<=  4.19) boot Android 17.
 
 ## Background
 
@@ -19,11 +19,11 @@ Also, Many devices in the market lack publicly available kernel sources, making 
 
 ## Solution
 
-This repository provides source-level reverts/patches that reverse the BPF requirements, allowing Android 16 QPR2 to boot on devices without full BPF support. The patches implement fallback mechanisms and remove hard dependencies on BPF functionality.
+This repository provides source-level reverts/patches that reverse the BPF requirements, allowing Android 17 to boot on devices without full BPF support. The patches implement fallback mechanisms and remove hard dependencies on BPF functionality.
 
 ## Current Status
 
-**Tested Configurations:**
+**Original Android 16 QPR2 results (not verified on LineageOS 24.0):**
 - **Kernel 4.19** - Android 16 QPR2 boots successfully
 - **Kernel 4.14** - Android 16 QPR2 boots successfully
 
@@ -39,10 +39,27 @@ Support has been added for all kernel versions: **4.4, 4.9, 4.14, and 4.19**. As
 - Unfortunately, it's not possible to support kernels older than 4.4 at this time.
 - If you manage to make older kernels work, please submit a PR!
 
+## LineageOS 24.0 test branch
+
+The original patch layout, filenames, authors and apply script are retained
+where possible. Patches are rebased for LineageOS 24.0 / Android 17.
+Redundant kernel requirement patches are omitted; the old SDK workaround is
+covered by the BPF-unavailable fallback in patch 0007.
+Removed S/4.14 and R/5.4 configs, FCM 5/6 build definitions and their missing
+HIDL definitions are restored. The frameworks/native epoll fallback is omitted
+because the target already uses epoll_wait.
+
+All component patch series pass git am on the tested source revisions.
+This branch has not been verified with a full ROM build or device boot.
+Use clean LineageOS 24.0 sources; do not apply over the other BPF patch branches.
+
 ## Usage
 
 ### Use Auto Patch Script
-1. Clone this repo in root of your source tree
+1. Clone this branch in root of your source tree:
+```bash
+git clone -b lineage-24.0-test https://github.com/yigityanik/fuck-bpf-next.git fuck-bpf
+```
 2. Run command:
 ```
 ./fuck-bpf/apply.sh --mb
@@ -58,7 +75,7 @@ git am /path/to/this/repo/component/*.patch
 
 ### Prerequisites
 
-- You have Android 16 QPR2 tree with proper blob patches
+- You have Android 17 tree with proper blob patches
 - Basic knowledge of Git & Android build system
 - Common sense :D
 

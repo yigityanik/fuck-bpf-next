@@ -1,4 +1,4 @@
-From 02de918438abf28dc7227b7cb0a995d57bff10da Mon Sep 17 00:00:00 2001
+From 93f554e4c01599b985fed8a9a5b3298269df0fcf Mon Sep 17 00:00:00 2001
 From: Aryan Sinha <techyminati@outlook.com>
 Date: Sat, 21 Feb 2026 10:25:40 +0100
 Subject: [PATCH] Connectivity: Skip CLAT perm check on pre-5.10 kernels
@@ -20,39 +20,24 @@ CLAT disabled on unsupported systems.
 This allows devices with older vendor kernels to boot
 successfully without full BPF/CLAT support.
 ---
- ...m_android_server_connectivity_ClatCoordinator.cpp | 12 +++---------
- 1 file changed, 3 insertions(+), 9 deletions(-)
+ .../com_android_server_connectivity_ClatCoordinator.cpp    | 7 +++++++
+ 1 file changed, 7 insertions(+)
 
 diff --git a/service/jni/com_android_server_connectivity_ClatCoordinator.cpp b/service/jni/com_android_server_connectivity_ClatCoordinator.cpp
-index 437e78fafda..9ae94fa2648 100644
+index 70991eb..9ae94fa 100644
 --- a/service/jni/com_android_server_connectivity_ClatCoordinator.cpp
 +++ b/service/jni/com_android_server_connectivity_ClatCoordinator.cpp
-@@ -91,11 +91,6 @@ static void verifyPerms(const char * const path,
+@@ -132,6 +132,13 @@ static void verifyClatPerms() {
  
- #undef ALOGF
- 
--bool isGsiImage() {
--    // this implementation matches 2 other places in the codebase (same function name too)
--    return !access("/system/system_ext/etc/init/init.gsi.rc", F_OK);
--}
--
- static const char* kClatdDir = "/apex/com.android.tethering/bin/for-system";
- static const char* kClatdBin = "/apex/com.android.tethering/bin/for-system/clatd";
- 
-@@ -138,10 +133,9 @@ static void verifyClatPerms() {
  #undef V2
  
-     // HACK: Some old vendor kernels lack ~5.10 backport of 'bpffs selinux genfscon' support.
--    // This is *NOT* supported, but let's allow, at least for now, U+ GSI to boot on them.
--    // (without this hack pixel5 R vendor + U gsi breaks)
--    if (isGsiImage() && !bpf::isAtLeastKernelVersion(5, 10, 0)) {
--        ALOGE("GSI with *BAD* pre-5.10 kernel lacking bpffs selinux genfscon support.");
++    // HACK: Some old vendor kernels lack ~5.10 backport of 'bpffs selinux genfscon' support.
 +    // This is *NOT* supported, but let's allow, at least for now, to make 16 QPR2 boot on them.
 +    if (!bpf::isAtLeastKernelVersion(5, 10, 0)) {
 +        ALOGW("Kernel < 5.10 detected, skipping CLAT perms for legacy kernel.");
-         return;
-     }
++        return;
++    }
++
+     if (fatal) abort();
+ }
  
--- 
-2.34.1
-

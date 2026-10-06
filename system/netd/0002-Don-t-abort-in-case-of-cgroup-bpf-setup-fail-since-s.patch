@@ -1,18 +1,24 @@
-From 8730e95a44f91d45070d110fb02f55eefdcb0c61 Mon Sep 17 00:00:00 2001
+From 4fddcaf49467068a0057d28a91b54a4ef6d25417 Mon Sep 17 00:00:00 2001
 From: Pierre-Hugues Husson <phh@phh.me>
 Date: Wed, 26 Oct 2022 18:13:56 -0400
-Subject: [PATCH 2/2] Don't abort in case of cgroup/bpf setup fail, since some
+Subject: [PATCH] Don't abort in case of cgroup/bpf setup fail, since some
  devices dont have BPF
 
 ---
- server/main.cpp | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ server/main.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/server/main.cpp b/server/main.cpp
-index d27fd76..b2f98c4 100644
+index be9a1d0..c702b8a 100644
 --- a/server/main.cpp
 +++ b/server/main.cpp
-@@ -142,7 +142,7 @@ int main() {
+@@ -142,12 +142,12 @@ int main(const int argc, const char* argv[]) {
+     std::string cg2_path;
+     if (!CgroupGetControllerPath(CGROUPV2_HIERARCHY_NAME, &cg2_path)) {
+         ALOGE("Failed to find cgroup v2 root %s", strerror(errno));
+-        exit(1);
++        cg2_path = "/sys/fs/cgroup";
+     }
  
      if (libnetd_updatable_init(cg2_path.c_str())) {
          ALOGE("libnetd_updatable_init failed");
@@ -21,6 +27,3 @@ index d27fd76..b2f98c4 100644
      }
      gLog.info("libnetd_updatable_init success");
  
--- 
-2.34.1
-

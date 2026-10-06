@@ -1,27 +1,25 @@
-From 71dcdd34025efd4afa48c1ac4c0879b3aeaf14ac Mon Sep 17 00:00:00 2001
+From 73fd96c7d4fe95c31e77e4bf15d7d0fb9e525559 Mon Sep 17 00:00:00 2001
 From: Pierre-Hugues Husson <phh@phh.me>
 Date: Wed, 13 Oct 2021 10:56:52 -0400
-Subject: [PATCH 2/3] Support no-bpf usecase
+Subject: [PATCH] Support no-bpf usecase
 
 Change-Id: I75a427a2a41aa4ab1104ad88a891bef0dc2d9c91
 ---
- loader/Loader.cpp | 3 +--
- 1 file changed, 1 insertion(+), 2 deletions(-)
+ loader/Loader.cpp | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
 
 diff --git a/loader/Loader.cpp b/loader/Loader.cpp
-index cde6447..6303d30 100644
+index 08c6b6d..e31a309 100644
 --- a/loader/Loader.cpp
 +++ b/loader/Loader.cpp
-@@ -689,8 +689,7 @@ void vendorBpfLoader() {
+@@ -601,9 +601,7 @@ void vendorBpfLoader() {
+         ALOGE("If this triggers reliably, you're probably missing kernel options or patches.");
          ALOGE("If this triggers randomly, you might be hitting some memory allocation "
                "problems or startup script race.");
-         ALOGE("--- DO NOT EXPECT SYSTEM TO BOOT SUCCESSFULLY ---");
+-        ALOGE("--- DO NOT EXPECT SYSTEM TO BOOT SUCCESSFULLY ---");
 -        sleep(20);
 -        exit(121);
-+        return;
++        ALOGW("Continuing with legacy kernel BPF fallback.");
      }
  
      const char* args[] = {"/apex/com.android.tethering/bin/netbpfload", "done", NULL};
--- 
-2.43.0
-
