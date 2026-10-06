@@ -81,3 +81,20 @@ Bu değişiklik cihaz kernelini 5.4'e yükseltmez; matris bağımlılığını t
 
 Güncellenmiş paket temiz kaynak ağacı içindir. Önceki paket uygulanmışsa
 tüm paketi yeniden uygulamayın; yalnızca eksik dosyaları geri getirin.
+
+## FCM 6 HIDL düzeltmesi
+
+FCM 6'da listelenip LineageOS 24.0 kaynaklarından kaldırılmış HIDL tanımları
+hardware/interfaces birleşik yamasına geri eklendi:
+
+- `android.hardware.automotive.sv@1.0`
+- `android.hardware.dumpstate@1.1` ve bağımlılığı `@1.0`
+- `android.hardware.input.classifier@1.0` ve bağımlılığı `input.common@1.0`
+- `android.hardware.ir@1.0`
+
+Kaynak: LineageOS/android_hardware_interfaces,
+`13d687a84c834af855bfb314b853b8372a7aa6d9` (lineage-23.2).
+Yalnızca doğrudan `Android.bp` ve `.hal` dosyaları eklenmiştir; servisler ve
+testler dahil edilmemiştir. Bu değişiklik cihazda yeni HAL servisleri etkinleştirmez.
+İki güncellenmiş yama temiz hedef revizyonlara `git am` ile doğrulanmıştır.
+Tam ROM derlemesi ve cihaz testi yapılmamıştır.
